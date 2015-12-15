@@ -18,6 +18,10 @@ Z=sparse(2^L,2^L);
 
 % find the eigenvalues of H = U E U'
 [U,E]=eig(full(H));
+% sort them
+[~,J]=sort(diag(E));
+U=U(:,J);
+E=E(J,J);
 
 % store raw data
 if raw
@@ -50,20 +54,23 @@ C=zeros(L,L);
 
 % initialise pauli diagonal element matrices
 S=cell(1,3);
-for n=1:3
-    S{n}=zeros(2^L,L);
+for k=1:3
+    S{k}=zeros(2^L,L);
 end
 
 % for each site i evaluate <n|\sigma_i|n> for each pauli \sigma and each
 % eigenvector |n>
 for i=1:L
     % create the three pauli matrices
-    s{1}=m{i}+p{i};
-    s{2}=1i*(p{i}-m{i});
-    s{3}=2*m{i}-I;
+    s{1}=p{i}+m{i};
+    s{2}=1i*(m{i}-p{i});
+    s{3}=2*n{i}-I;
     % convert to the eigenbasis and get diagonal elements
-    for n=1:3
-        S{n}(:,i)=diag(U'*s{n}*U);
+    for k=1:3
+        % get diagonal
+        S{k}(:,i)=diag(U'*s{k}*U);
+        % also get first off diagonal
+        S{k}
     end
 end
 % for each pair of sites find the maximal correlation
@@ -72,9 +79,9 @@ for i=1:L
         % make a 3x3 matrix of the correlators
         cij=zeros(3,3);
         % fill in the elements
-        for n=1:3
+        for k=1:3
             for m=1:3
-                cij{n,m}=dot(S{n}(:,i),S{m}(:,j));
+                cij{k,m}=dot(S{k}(:,i),S{m}(:,j));
             end
         end
         % find the max singular value of cij
@@ -86,26 +93,28 @@ end
 np=L*(L-1)/2;
 % store log correlations between pairs with distance
 V=zeros(np,2);
-n=1;
+k=1;
 for i=1:L
     for j=(i+1):L
-        V(n,1)=D(i,j);
-        V(n,2)=-log(C(i,j));
-        n=n+1;
+        V(k,1)=D(i,j);
+        V(k,2)=log(C(i,j));
+        k=k+1;
     end
 end
-% theil-sen line fit
+% theil-sen line fit gives the inverse localisation length
+[b,db]=theil_sen_slope_fit(V(:,1),-V(:,2));
 
 
 Data.stats.C=C;
+Data.stats.b=b;
+Data.stats.db=db;
 
 % PART 3 thouless conductances
 
-% for each site try with H1=sigma_x_i
-H1
+% for each site try with H1= sigma_x
 
-% calculate E2_n = E_n + H1_nn
-E2_d=E_d+diag(U'*H1*U);
+
+% get the coupling between neigbouring energh levels
 
 
 end

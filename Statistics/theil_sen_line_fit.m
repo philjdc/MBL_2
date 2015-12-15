@@ -1,5 +1,7 @@
 function [ma,mb,da,db]=theil_sen_line_fit(x,y)
 % finds the gradient of a data set using the theil-sen estimator
+% finds the intercept with a similar estimator
+% returns errors on both
 
 % number of data point
 n=length(x);
