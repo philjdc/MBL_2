@@ -1,4 +1,4 @@
-function [H,n,p,m,I,Z] = Ham_East_Model(J,t,h,dh,L,left_flip,right_flip,boundary_cyclic)
+function [H,n,p,m,I,Z,D] = hamiltonian_east_model(J,t,h,dh,L,left_flip,right_flip,boundary_cyclic)
 % makes facilitated spin hamiltonian. Returns spin algebra operators as
 % well
 
@@ -23,31 +23,35 @@ end
 if (abs(J)>0)
     % add zz coupling
     for i=1:(L-1)
-        H=H+J*(n{i}.*n{i+1});
+        H=H+J*(n{i}*n{i+1});
     end
     if boundary_cyclic
-        H=H+J*(n{L}.*n{1});
+        H=H+J*(n{L}*n{1});
     end
 end
+
+
 
 if (abs(t)>0)
     % add flipping due to paticle to the left
     if left_flip
         for i=1:(L-1)
-            H=H+t*n{i}*(p{i+1}+m{i+1});
+            H=H-t*n{i}*(p{i+1}+m{i+1});
         end
         if boundary_cyclic
-            H=H+t*n{L}*(p{1}+m{1});
+            H=H-t*n{L}*(p{1}+m{1});
         end
     end
 
     % add flipping due to paticle to the right
     if right_flip
         for i=1:(L-1)
-            H=H+t*n{i+1}*(p{i}+m{i});
+            H=H-t*n{i+1}*(p{i}+m{i});
         end
         if boundary_cyclic
-            H=H+t*n{1}*(p{L}+m{L});
+            H=H-t*n{1}*(p{L}+m{L});
         end
     end
 end
+
+D=dist_matrix(adj_matrix_square_lattice(L,1,boundary_cyclic));
