@@ -44,7 +44,7 @@ end
 data_fname_pattern=strcat(run_name,'_*');
 
 % start collecting data
-for n=1:N
+parfor n=1:N
     % if not complete
     if ~complete(n)
         % make a filename

@@ -20,9 +20,9 @@ for J=J_vals
                     p.t=t;
                     p.dh=dh;
                     p.L=L;
-                    p.left_flip
-                    p.right_flip
-                    p.boundary_cyclic
+                    p.left_flip=true;
+                    p.right_flip=false;
+                    p.boundary_cyclic=true;
                     switch L
                         case 6
                             N=200;
