@@ -7,9 +7,7 @@ function Data = statistics_1_handler_east_model(J,t,h,dh,L,left_flip,right_flip,
 % Output is object Data with fields
 % Data
 %     .P    -   parameters of the data collection 
-% 	  .R    -   Level statistics
-%       .rk -   all level spacing ratios
-%       .mr -   mean level spacing ratio
+% 	  .R    -   Level statistics distribution data
 %     .C    -   Correlation statistics
 %       .C  -   correlations between single site operators averaged over
 %               time, and maximised over operators
@@ -28,6 +26,10 @@ function Data = statistics_1_handler_east_model(J,t,h,dh,L,left_flip,right_flip,
 %               Thouless conductance, allowing for anaylsis of possible
 %               mobility edges
 
+% standard vals
+nWindow=50;
+nCoeffs=30;
+
 
 % get date_time
 date_time=strrep(strcat(datestr(clock,'yyyy-mm-dd-HH--MM'),'m',datestr(clock,'ss'),'s'),'--','h');
@@ -45,12 +47,12 @@ P.N=N;
 P.date_time=date_time;
 
 % initialise data
-R.rk=[];
+rk=[];
 C.C=cell(1,N);
-C.V=[];
-G.Gk=cell(1,3);
-G.Gk(:)={[]};
-G.mE=[];
+V=[];
+Gk=cell(1,3);
+Gk(:)={[]};
+mE=[];
 E=[];
 
 % get the zero field hamiltonian
@@ -73,10 +75,11 @@ for nn=1:N
                 H=H+n{i}*unifrnd(-dh/2,dh/2);
             end
             % get statistics
+            
             [Mn,Rn,Cn,Gn]= statistics_1(H,n,m,p,L,D);
         catch
             % catch error and flag it
-            flag_success=false;
+        %    flag_success=false;
         end
         if flag_success
             % if successfull continue
@@ -86,13 +89,13 @@ for nn=1:N
     
     % amalgamate data
     E=[E;Mn.E];
-    R.rk=[R.rk;Rn.rk];
+    rk=[rk;Rn.rk];
     C.C{nn}=Cn.C;
-    C.V=[C.V;Cn.V];
+    V=[V;Cn.V];
     for k=1:3
-        G.Gk{k}=[G.Gk{k};Gn.Gk{k}];
+        Gk{k}=[Gk{k};Gn.Gk{k}];
     end
-    G.mE=[G.mE;Gn.mE];
+    mE=[mE;Gn.mE];
     
     
     
@@ -103,7 +106,7 @@ end
 
 % calculate centres and widths of some of the distributions to aid analysis
 % mean level spacing ratio
-R.rm=mean(R.rk);
+R=sample_data(rk,nCoeffs,[0,1]);
 % median correlations
 C.mC=zeros(L,L,N);
 for nn=1:N
@@ -115,21 +118,71 @@ for nn=1:N
     C.dC(:,:,nn)=abs(C.dC(:,:,nn)-C.mC);
 end
 C.dC=median(C.dC,3);
+% collate data too
+dVals=unique(V(:,1));
+C.mV=zeros(1,max(dVals)+1);
+C.dV=zeros(1,max(dVals)+1);
+for d=1:max(dVals)
+    % get all cvals at this distance
+    I=(V(:,1)==d);
+    C.mV(d+1)=median(V(I,2));
+    C.dV(d+1)=median(abs(V(I,2)-C.mV(d+1)));
+end
 % estimate inverse loc. length
-[b,db]=theil_sen_slope_fit(C.V(:,1),-C.V(:,2));
+[b,db]=theil_sen_slope_fit(V(:,1),-V(:,2));
 C.b=b;
 C.db=db;
 % mean thoulless conductances
-G.mG=zeros(1,3);
-G.dG=zeros(1,3);
-for k=1:3
-    G.mG(k)=median(G.Gk{k}(:));
-    G.dG(k)=median(abs(G.Gk{k}(:)-G.mG(k)));
-end
+
 % rescale energies to [0,1]
 E_max=max(E);
 E_min=min(E);
-G.mE=(G.mE-E_min)/(E_max-E_min);
+mE=(mE-E_min)/(E_max-E_min);
+% find median G in each window
+G=cell(1,3);
+
+W1mE=zeros(nWindow,1);
+W1dE=zeros(nWindow,1);
+W1BE=zeros(nWindow,1);
+W1N=zeros(nWindow,1);
+W2mE=zeros(nWindow,1);
+W2dE=zeros(nWindow,1);
+W2N=zeros(nWindow,1);
+W2BE=zeros(nWindow,1);
+for k=1:3
+    G{k}=sample_data(Gk{k}(:),nCoeffs);
+    W1BE=(0:nWindow)'/nWindow;
+    W2BE=[0,quantile(mE,nWindow)]';
+    for i=1:nWindow
+        % get evenly spaced windows
+        I=(mE>W1BE(i))&(mE<=W1BE(i+1));
+        G_window=Gk{k}(I,:);
+        G_window=G_window(:);
+        % get data for evenly spaced windows
+        W1mE(i)=median(G_window);
+        W1dE(i)=median(abs(G_window-W1mE(i)));
+        W1N(i)=length(G_window(:));
+        
+        % get evenly populated windows
+        I=(mE>W2BE(i))&(mE<=W2BE(i+1));
+        G_window=Gk{k}(I,:);
+        G_window=G_window(:);
+        % get data for evenly populated windows
+        W2mE(i)=median(G_window);
+        W2dE(i)=median(abs(G_window-W2mE(i)));
+        W2N(i)=length(G_window);
+    end
+    G{k}.W1.mE=W1mE;
+    G{k}.W1.dE=W1dE;
+    G{k}.W1.N=W1N;
+    G{k}.W1.edges=W1BE;
+    G{k}.W2.mE=W2mE;
+    G{k}.W2.dE=W2dE;
+    G{k}.W2.N=W2N;
+    G{k}.W2.edges=W2BE;
+end
+
+
 
 % output data
 Data.P=P;
