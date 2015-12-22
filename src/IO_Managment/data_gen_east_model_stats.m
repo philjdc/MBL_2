@@ -12,7 +12,13 @@ complete(:)=false;
 % initialise complete filename
 complete_fname='complete_tmp';
 
-% if output dir doesn't exist make it then and go there, if already
+% if output dir doesnt exist make it
+out_dir=fullfile(pwd,'out');
+if ~exist(out_dir,'dir')
+    mkdir(out_dir);
+end
+
+% if tmp dir doesn't exist make it then and go there, if already
 % existing look for tmp files from existing run
 tmp_dir=fullfile(pwd,'tmp',run_name);
 
@@ -77,7 +83,7 @@ cd(wor_dir);
 
 % move the tmp_dir to out
 fclose('all');
-movefile(zip_fname,fullfile(pwd,'out'));
+movefile(zip_fname,out_dir);
 
 % delete temporary files
 rmdir(tmp_dir,'s');
